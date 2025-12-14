@@ -74,13 +74,52 @@ def main():
           .reindex(AGE_ORDER)
     )
 
-    print("\n==================== (2) 연령대별 여가 목적 종류 수(nunique) ====================")
-    print(f"{'연령대':<4} | {'종류 수'.rjust(6)}")
-    print("-" * (4 + 3 + 6))
-    for age, cnt in age_variety.items():
-        if pd.isna(cnt):
+    sex_raw = df["SEXDSTN_FLAG_CD"].astype(str).str.strip().str.upper()
+    sex_map = {"M": "남성", "F": "여성"}
+    df["성별"] = sex_raw.map(sex_map)
+
+    sex_purpose_ratio = (
+        df.groupby("성별")["LSR_TIME_USE_PURPS_RN1_VALUE"]
+          .value_counts(normalize=True)
+          .mul(100).round(1)
+          .reset_index(name="비율(%)")
+          .sort_values(["성별", "비율(%)"], ascending=[True, False])
+    )
+
+    print("\n==================== (2-1) 성별 여가 목적(1순위) 비율 ====================")
+    for sex, group in sex_purpose_ratio.groupby("성별", sort=False):
+        if group.empty:
             continue
-        print(f"{age:<4} | {str(int(cnt)).rjust(6)}")
+        print(f"\n[{sex}]")
+        print_table_header()
+        for _, row in group.iterrows():
+            print(fmt_row(row["LSR_TIME_USE_PURPS_RN1_VALUE"], row["비율(%)"]))
+
+    sex_age_ratio = (
+        df.groupby("성별")["AGRDE_FLAG_NM"]
+          .value_counts(normalize=True)
+          .mul(100).round(1)
+          .reset_index(name="비율(%)")
+    )
+
+    sex_age_ratio["AGRDE_FLAG_NM"] = pd.Categorical(
+        sex_age_ratio["AGRDE_FLAG_NM"],
+        categories=AGE_ORDER,
+        ordered=True
+    )
+    sex_age_ratio = sex_age_ratio.sort_values(["성별", "AGRDE_FLAG_NM"])
+
+    print("\n==================== (2-2) 성별 내부 연령대 비율 ====================")
+    for sex, group in sex_age_ratio.groupby("성별", sort=False):
+        if group.empty:
+            continue
+        print(f"\n[{sex}]")
+        print(f"{'연령대':<4} | {'비율(%)'.rjust(NUM_WIDTH)}")
+        print("-" * (4 + 3 + NUM_WIDTH))
+        for _, row in group.iterrows():
+            age = row["AGRDE_FLAG_NM"]
+            val = f"{row['비율(%)']:.1f}".rjust(NUM_WIDTH)
+            print(f"{age:<4} | {val}")
 
     total_ratio = (
         df["LSR_TIME_USE_PURPS_RN1_VALUE"]
@@ -95,5 +134,7 @@ def main():
     for _, row in total_ratio.iterrows():
         print(fmt_row(row["여가목적"], row["비율(%)"]))
 
+
 if __name__ == "__main__":
     main()
+    
