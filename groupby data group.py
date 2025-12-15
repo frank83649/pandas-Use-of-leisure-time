@@ -1,4 +1,9 @@
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.rcParams["font.family"] = "Malgun Gothic"   # Windows: 맑은 고딕
+mpl.rcParams["axes.unicode_minus"] = False
+
 from wcwidth import wcswidth
 import warnings
 
@@ -129,10 +134,122 @@ def main():
     )
     total_ratio.columns = ["여가목적", "비율(%)"]
 
+        # ==================== (3) 연령대별 TOP1 목적 집중도 계산 ====================
+    top1_focus = (
+        df.groupby("AGRDE_FLAG_NM")["LSR_TIME_USE_PURPS_RN1_VALUE"]
+          .value_counts(normalize=True)
+          .groupby(level=0)
+          .max()
+          .mul(100)
+          .round(1)
+          .reindex(AGE_ORDER)
+    )
+
     print("\n==================== (3) 전체 여가 목적(1순위) 비율 ====================")
     print_table_header()
     for _, row in total_ratio.iterrows():
         print(fmt_row(row["여가목적"], row["비율(%)"]))
+
+            # ==================== 그래프 1: 연령대별 TOP3(1·2·3등) - 가로 막대 ====================
+    top3 = (
+        age_purpose_ratio
+        .sort_values(["AGRDE_FLAG_NM", "비율(%)"], ascending=[True, False])
+        .groupby("AGRDE_FLAG_NM", observed=False, sort=False)
+        .head(3)
+        .copy()
+    )
+    top3["순위"] = top3.groupby("AGRDE_FLAG_NM").cumcount() + 1
+
+    top3_pivot = (
+        top3.pivot(index="AGRDE_FLAG_NM", columns="순위", values="비율(%)")
+            .reindex(AGE_ORDER)
+    )
+
+    def purpose_of(age, rank):
+        return top3[(top3["AGRDE_FLAG_NM"] == age) & (top3["순위"] == rank)]["LSR_TIME_USE_PURPS_RN1_VALUE"].iloc[0]
+
+    y = list(range(len(AGE_ORDER)))
+    height = 0.24  # 막대 두께(세로 간격)
+
+    plt.figure(figsize=(11, 5.5))
+
+    rank_colors = {
+    1: "tab:blue",   # 1등 → 초록 (원래 3등 색)
+    2: "tab:orange",  # 2등 → 그대로
+    3: "tab:green"     # 3등 → 파랑
+}
+    bars1 = plt.barh(
+    [i + height for i in y],
+        top3_pivot[1].values,
+        height=height,
+        label="1등",
+        color=rank_colors[1]
+    )
+
+    bars2 = plt.barh(
+        [i for i in y],
+        top3_pivot[2].values,
+        height=height,
+        label="2등",
+        color=rank_colors[2]
+    )
+
+    bars3 = plt.barh(
+        [i - height for i in y],
+        top3_pivot[3].values,
+        height=height,
+        label="3등",
+        color=rank_colors[3]   # ← 여기
+    )
+
+    plt.yticks(y, AGE_ORDER)              # 벽면(Y축): 연령대
+    plt.xlabel("비율(%)")                 # 바닥(X축): 비율
+    plt.ylabel("연령대")
+    plt.title("연령대별 여가 목적 TOP3 (1·2·3등)")
+    plt.xlim(0, float(top3_pivot.max().max()) + 12)  # 오른쪽 여백(라벨 공간)
+
+    # 막대 '오른쪽'에 여가목적 + % 표시
+    for rank, bars in [(1, bars1), (2, bars2), (3, bars3)]:
+        for i, b in enumerate(bars):
+            age = AGE_ORDER[i]
+            val = b.get_width()
+            label = f"{purpose_of(age, rank)} ({val:.1f}%)"
+            plt.text(val + 0.4, b.get_y() + b.get_height()/2, label, va="center", fontsize=9)
+
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    # ==================== 그래프 2: 성별 여가 목적 분포(TOP5) ====================
+
+    sex_colors = {
+        "남성": "tab:blue",
+        "여성": "tab:orange"
+    }
+
+    for sex in ["남성", "여성"]:
+        top5 = (
+            sex_purpose_ratio[sex_purpose_ratio["성별"] == sex]
+            .head(5)
+            .sort_values("비율(%)")
+        )
+
+        plt.figure(figsize=(10, 4))
+        plt.barh(
+            top5["LSR_TIME_USE_PURPS_RN1_VALUE"],
+            top5["비율(%)"],
+            color=sex_colors[sex]
+    )
+
+        plt.title(f"{sex} 여가 목적 TOP5")
+        plt.xlabel("비율(%)")
+        plt.ylabel("여가 목적")
+
+        for i, v in enumerate(top5["비율(%)"]):
+            plt.text(v + 0.1, i, f"{v}%", va="center", fontsize=7)
+
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":
