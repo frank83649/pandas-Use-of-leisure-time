@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-mpl.rcParams["font.family"] = "Malgun Gothic"   # Windows: 맑은 고딕
+mpl.rcParams["font.family"] = "Malgun Gothic"   
 mpl.rcParams["axes.unicode_minus"] = False
 
 from wcwidth import wcswidth
@@ -134,7 +134,7 @@ def main():
     )
     total_ratio.columns = ["여가목적", "비율(%)"]
 
-        # ==================== (3) 연령대별 TOP1 목적 집중도 계산 ====================
+        
     top1_focus = (
         df.groupby("AGRDE_FLAG_NM")["LSR_TIME_USE_PURPS_RN1_VALUE"]
           .value_counts(normalize=True)
@@ -150,7 +150,7 @@ def main():
     for _, row in total_ratio.iterrows():
         print(fmt_row(row["여가목적"], row["비율(%)"]))
 
-            # ==================== 그래프 1: 연령대별 TOP3(1·2·3등) - 가로 막대 ====================
+            
     top3 = (
         age_purpose_ratio
         .sort_values(["AGRDE_FLAG_NM", "비율(%)"], ascending=[True, False])
@@ -169,14 +169,14 @@ def main():
         return top3[(top3["AGRDE_FLAG_NM"] == age) & (top3["순위"] == rank)]["LSR_TIME_USE_PURPS_RN1_VALUE"].iloc[0]
 
     y = list(range(len(AGE_ORDER)))
-    height = 0.24  # 막대 두께(세로 간격)
+    height = 0.24  
 
     plt.figure(figsize=(11, 5.5))
 
     rank_colors = {
-    1: "tab:blue",   # 1등 → 초록 (원래 3등 색)
-    2: "tab:orange",  # 2등 → 그대로
-    3: "tab:green"     # 3등 → 파랑
+    1: "tab:blue",  
+    2: "tab:orange",  
+    3: "tab:green"    
 }
     bars1 = plt.barh(
     [i + height for i in y],
@@ -199,16 +199,15 @@ def main():
         top3_pivot[3].values,
         height=height,
         label="3등",
-        color=rank_colors[3]   # ← 여기
+        color=rank_colors[3] 
     )
 
-    plt.yticks(y, AGE_ORDER)              # 벽면(Y축): 연령대
-    plt.xlabel("비율(%)")                 # 바닥(X축): 비율
+    plt.yticks(y, AGE_ORDER)              
+    plt.xlabel("비율(%)")                 
     plt.ylabel("연령대")
     plt.title("연령대별 여가 목적 TOP3 (1·2·3등)")
-    plt.xlim(0, float(top3_pivot.max().max()) + 12)  # 오른쪽 여백(라벨 공간)
+    plt.xlim(0, float(top3_pivot.max().max()) + 12) 
 
-    # 막대 '오른쪽'에 여가목적 + % 표시
     for rank, bars in [(1, bars1), (2, bars2), (3, bars3)]:
         for i, b in enumerate(bars):
             age = AGE_ORDER[i]
@@ -219,8 +218,6 @@ def main():
     plt.legend()
     plt.tight_layout()
     plt.show()
-
-    # ==================== 그래프 2: 성별 여가 목적 분포(TOP5) ====================
 
     sex_colors = {
         "남성": "tab:blue",
