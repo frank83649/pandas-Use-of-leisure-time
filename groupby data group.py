@@ -254,12 +254,8 @@ def main():
     plt.tight_layout()
     plt.show()
 
-        # ==================== (4) 머신러닝: 여가 목적(1순위) 예측 ====================
-
-    # 사용할 컬럼 선택
     ml_df = df[["AGRDE_FLAG_NM", "성별", "LSR_TIME_USE_PURPS_RN1_VALUE"]].dropna()
 
-    # 문자열 → 숫자 인코딩
     le_age = LabelEncoder()
     le_sex = LabelEncoder()
     le_target = LabelEncoder()
@@ -271,19 +267,15 @@ def main():
     X = ml_df[["연령대_enc", "성별_enc"]]
     y = ml_df["목표_enc"]
 
-    # 학습 / 테스트 분리
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
-    # 모델 학습
     model = LogisticRegression(max_iter=1000)
     model.fit(X_train, y_train)
 
-    # 예측
     y_pred = model.predict(X_test)
 
-    # 평가
     acc = accuracy_score(y_test, y_pred)
 
     print("\n==================== (4) 머신러닝 결과 ====================")
